@@ -533,40 +533,52 @@
 </div>
 
 <script type="module">
-    // Import semua service
     import ApiService from './js/api.js';
     import { onAuthStateChange } from './js/auth-service.js';
 
-    // Buat tersedia global
     window.ApiService = ApiService;
 
-    // Auth state listener - auto detect login/logout
+    // ============================================================
+    // AUTH STATE LISTENER — SATU-SATUNYA SUMBER KEBENARAN
+    // Ini yang mengontrol semua perubahan login/logout
+    // ============================================================
     onAuthStateChange(async (user) => {
+        console.log('🔐 Auth state changed:', user ? `Logged in as ${user.email}` : 'Logged out');
+
         if (user) {
-            // User login
+            // ====== USER LOGIN ======
+            // Tampilkan navbar user, sembunyikan guest
             document.getElementById('navUser').style.display = 'flex';
             document.getElementById('navGuest').style.display = 'none';
+            document.getElementById('userName').textContent =
+                user.displayName || user.email?.split('@')[0] || 'Pengguna';
 
-            showLoading('Memuat data...');
-            await window.loadFromFirebase();
-            hideLoading();
-
-            // Tutup modal jika terbuka
+            // Tutup modal auth jika terbuka
             closeAuthModal();
+
+            // Load semua data dari Firebase
+            // Fungsi ini ada di app.js dan akan reset state dulu
+            if (typeof window.loadFromFirebase === 'function') {
+                await window.loadFromFirebase();
+            }
+
         } else {
-            // User logout
+            // ====== USER LOGOUT ======
+            // Tampilkan navbar guest, sembunyikan user
             document.getElementById('navUser').style.display = 'none';
             document.getElementById('navGuest').style.display = 'block';
-            document.getElementById('userName').textContent = 'Pengguna';
 
-            // Reset state
-            window.appState.history = [];
-            window.appState.lastResult = null;
-            window.appState.completedModules = [];
+            // Reset semua UI dan state
+            if (typeof window.resetAfterLogout === 'function') {
+                window.resetAfterLogout();
+            }
 
-            updateDashboard();
-            updateStats();
-            renderModules();
+            // Tampilkan modal login setelah delay kecil
+            setTimeout(() => {
+                if (typeof showAuthModal === 'function') {
+                    showAuthModal('login');
+                }
+            }, 500);
         }
     });
 </script>
